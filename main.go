@@ -17,6 +17,7 @@ import (
 	"github.com/docker/cli/cli-plugins/plugin"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/spf13/cobra"
 )
 
@@ -52,6 +53,26 @@ func main() {
 					}
 
 					img, _, err := dockerCli.Client().ImageInspectWithRaw(context.Background(), imgId)
+					if client.IsErrNotFound(err) {
+						// TODO use the API client
+						runCmd := exec.Command(
+							dockerCliCommand,
+							slices.Concat(
+								globalArgs,
+								[]string{"pull"},
+								[]string{imgId},
+							)...,
+						)
+						runCmd.Stdout = os.Stderr
+						runCmd.Stderr = os.Stderr
+
+						if err := runCmd.Run(); err != nil {
+							return fmt.Errorf("failed to pull image '%s': %v", imgId, err)
+						}
+
+						// Retry inspect
+						img, _, err = dockerCli.Client().ImageInspectWithRaw(context.Background(), imgId)
+					}
 					if err != nil {
 						return fmt.Errorf("failed to inspect image '%s': %v", imgId, err)
 					}
