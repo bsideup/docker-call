@@ -2,6 +2,8 @@
 
 This project (not affiliated with Docker Inc.) is a PoC of a Docker CLI plugin that allows sourcing `docker run` flags (such as volumes, ports, network and other runtime parameters) from Docker images, as well as running Dockerfiles directly.
 
+![Demo](demo.gif)
+
 ## Install
 Run `make install` or `go build -o $HOME/.docker/cli-plugins/docker-call .`.
 
@@ -82,6 +84,8 @@ FROM golang:1.22 AS workspace
 
     # mount the current directory as /work
     LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=/work'
+
+    VOLUME "/root/.cache/go-build"
 
     WORKDIR /work
 

@@ -3,21 +3,25 @@ FROM golang:1.22 AS workspace
     # mount the current directory as /work
     LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=/work'
 
+    VOLUME "/root/.cache/go-build"
+
     WORKDIR /work
 
     COPY go.mod go.sum ./
 
     RUN go mod download
 
+FROM workspace as build
+
+    COPY . .
+
+    RUN CGO_ENABLED=0 go build -ldflags="-extldflags=-static" .
+
+    CMD "true"
+
 FROM workspace AS tidy
 
     CMD ["go", "mod", "tidy"]
-
-FROM workspace as build
-
-        COPY . .
-    
-        RUN CGO_ENABLED=0 go build -ldflags="-extldflags=-static" .
 
 FROM docker:cli as smoke-test
 
