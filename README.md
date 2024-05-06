@@ -3,7 +3,7 @@
 This project (not affiliated with Docker Inc.) is a PoC of a Docker CLI plugin that allows sourcing `docker run` flags (such as volumes, ports, network and other runtime parameters) from Docker images, as well as running Dockerfiles directly.
 
 ## Install
-Run `make install` or `go build -o $$HOME/.docker/cli-plugins/docker-call .`.
+Run `make install` or `go build -o $HOME/.docker/cli-plugins/docker-call .`.
 
 ## Examples
 
