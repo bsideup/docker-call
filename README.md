@@ -170,16 +170,19 @@ BUILD SUCCESSFUL in 5s
 docker call file://Dockerfile#build-only  0.12s user 0.11s system 3% cpu 7.005 total
 ```
 
-Note that the volumes are consistently hashed (we will use the `--dry-run` flag that skips the execution):
+Note that the volumes are consistently hashed based on path (we will use the `--dry-run` flag that skips the execution):
 ```shell
-$ docker call file://Dockerfile#test --dry-run
-Will run image 'sha256:982066bad72e6aede1ae84dd41711f311e2b0fcbbe59035b44a2104fcaf30b14' with the following flags:
-	--mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
+$ docker call file://Dockerfile#build-only --dry-run
+Will run image 'sha256:4258df212b520090587281416b0bb86ff444afd064c13c877d758d4345fed68e' with the following flags:
 	--mount type=bind,source=.,target=/work
-	--network host
 	-v action-cbb58c517b7c38e4789f9a016f044a1578e8d428:/root/.gradle
 	-v action-dcfeaade80a873a79b6904878ac47bbf06a53079:/work/.gradle
-	-e workdir=/Users/bsideup/Downloads/testcontainers-java
+
+$ docker call file://Dockerfile#build-only --dry-run
+Will run image 'sha256:4258df212b520090587281416b0bb86ff444afd064c13c877d758d4345fed68e' with the following flags:
+	--mount type=bind,source=.,target=/work
+	-v action-cbb58c517b7c38e4789f9a016f044a1578e8d428:/root/.gradle
+	-v action-dcfeaade80a873a79b6904878ac47bbf06a53079:/work/.gradle
 ```
 
 ### Docker Wormhole pattern
