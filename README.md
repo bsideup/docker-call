@@ -213,7 +213,7 @@ docker call file://Dockerfile#build-only  0.12s user 0.11s system 3% cpu 7.005 t
 ```
 
 ### Actions as images
-Docker Call always you to publish your steps (actions?) as images:
+Docker Call allows you to publish your steps (actions?) as images:
 ```shell
 $ docker build --push --target=workspace -t bsideup/go-workspace .
 [+] Building 0.3s (9/9) FINISHED                      docker:desktop-linux
