@@ -22,8 +22,9 @@ FROM workspace as build
 FROM docker:cli as smoke-test
 
     LABEL com.docker.runtime.mounts.docker='type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock'
-    LABEL com.docker.runtime.mounts.project='type=bind,source=${workdir},target=${workdir}'
+    LABEL com.docker.runtime.envs.WORKDIR='${workdir}'
+    LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=${workdir}'
 
     COPY --from=build /work/docker-call /root/.docker/cli-plugins/docker-call
 
-    CMD ["sh", "-c", "docker call -w $workdir file://examples/exa.Dockerfile"]
+    CMD ["sh", "-c", "docker call -w $WORKDIR file://examples/exa.Dockerfile"]

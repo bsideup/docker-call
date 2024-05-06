@@ -38,6 +38,7 @@ func main() {
 		func(dockerCli command.Cli) *cobra.Command {
 			var (
 				workdir string
+				dryRun  bool
 			)
 
 			cmd := &cobra.Command{
@@ -79,6 +80,23 @@ func main() {
 
 					runFlags := toRunFlags(img, workdir)
 
+					if dryRun {
+						fmt.Printf("Will run image '%s' with the following flags:\n", imgId)
+						for i, flag := range runFlags {
+							if i%2 == 0 {
+								fmt.Print("\t")
+							}
+							fmt.Print(flag)
+							if i%2 == 1 {
+								fmt.Println()
+							} else {
+								fmt.Print(" ")
+							}
+						}
+
+						return nil
+					}
+
 					// TODO use the API client
 					runCmd := exec.Command(
 						dockerCliCommand,
@@ -106,6 +124,7 @@ func main() {
 
 			flags := cmd.Flags()
 			flags.StringVarP(&workdir, "workdir", "w", wd, "Work dir")
+			flags.BoolVar(&dryRun, "dry-run", false, "Only print the args that would be run")
 			return cmd
 		},
 		manager.Metadata{
@@ -168,21 +187,27 @@ func toRunFlags(img types.ImageInspect, workdir string) []string {
 	var runFlags []string
 
 	for label, value := range img.Config.Labels {
+		value = os.Expand(value, func(key string) string {
+			switch key {
+			case "workdir":
+				return workdir
+			default:
+				return key
+			}
+		})
+
 		if _, ok := strings.CutPrefix(label, LABEL_PREFIX+".mounts."); ok {
-			value = os.Expand(value, func(key string) string {
-				switch key {
-				case "workdir":
-					return workdir
-				default:
-					return key
-				}
-			})
 			runFlags = append(runFlags, "--mount", value)
 			continue
 		}
 
 		if _, ok := strings.CutPrefix(label, LABEL_PREFIX+".ports."); ok {
 			runFlags = append(runFlags, "-p", value)
+			continue
+		}
+
+		if envKey, ok := strings.CutPrefix(label, LABEL_PREFIX+".envs."); ok {
+			runFlags = append(runFlags, "-e", fmt.Sprintf("%s=%s", envKey, value))
 			continue
 		}
 
@@ -200,8 +225,6 @@ func toRunFlags(img types.ImageInspect, workdir string) []string {
 
 		runFlags = append(runFlags, "-v", fmt.Sprintf("%s:%s", id, volume))
 	}
-
-	runFlags = append(runFlags, "-e", fmt.Sprintf("workdir=%s", workdir))
 
 	return runFlags
 }

@@ -98,15 +98,6 @@ FROM workspace as build
         COPY . .
     
         RUN CGO_ENABLED=0 go build -ldflags="-extldflags=-static" .
-
-FROM docker:cli as smoke-test
-
-    LABEL com.docker.runtime.mounts.docker='type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock'
-    LABEL com.docker.runtime.mounts.project='type=bind,source=${workdir},target=${workdir}'
-
-    COPY --from=build /work/docker-call /root/.docker/cli-plugins/docker-call
-
-    CMD ["sh", "-c", "docker call -w $workdir file://examples/exa.Dockerfile"]
 ```
 
 As you can see, this is a multistage Dockerfile, formatted [to my preference](https://x.com/bsideup/status/1784262018834334196).
@@ -122,35 +113,6 @@ go: downloading github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7
 ```
 
 Note the `file://Dockerfile#workspace` syntax that allows selecting the build stage (similar to `docker build --target=workspace -f Dockerfile`).
-
-Now let's run the smoke test, which will start a container with Docker CLI, install Docker Call CLI plugin in it, mount the Docker socket, mount project's workdir and execute `exa` from previous example, all with a single, simple invocation:
-```shell
-$ docker call file://Dockerfile#smoke-test
-[+] Building 0.2s (7/7) FINISHED                                             docker:default
- => [internal] load build definition from exa.Dockerfile                               0.0s
- => => transferring dockerfile: 225B                                                   0.0s
- => [internal] load metadata for docker.io/library/alpine:3                            0.2s
- => [internal] load .dockerignore                                                      0.0s
- => => transferring context: 52B                                                       0.0s
- => [1/3] FROM docker.io/library/alpine:3@sha256:c5b1261d6d3e43071626931fc004f70149ba  0.0s
- => CACHED [2/3] WORKDIR /work                                                         0.0s
- => CACHED [3/3] RUN apk add --no-cache exa                                            0.0s
- => exporting to image                                                                 0.0s
- => => exporting layers                                                                0.0s
- => => writing image sha256:146c1fd20a955eea0ea7d40f355cb13d5535ec26657427e6e0a8a5a8e  0.0s
-WARNING: current commit information was not captured by the build: git was not found in the system: exec: "git": executable file not found in $PATH
-.rwxr-xr-x  24M root  5 May 20:30 docker-call
-.rw-r--r--  787 root  5 May 21:17 Dockerfile
-drwxr-xr-x    - root  5 May 21:09 examples
-.rw-r--r-- 3.5k root  5 May 20:31 go.mod
-.rw-r--r--  72k root 28 Apr 17:04 go.sum
-.rw-r--r-- 1.1k root  5 May 20:21 LICENSE.md
-.rw-r--r-- 4.3k root  5 May 20:53 main.go
-.rw-r--r--   62 root  2 May 12:52 Makefile
-.rw-r--r-- 5.8k root  5 May 21:21 README.md
-```
-
-This roughtly translates into... err... I won't even try to come up with the full `docker run` command 😅
 
 ### Auto-volumes
 Docker Call with automatically mount the volumes defined in your Dockerfile. This is especially handy for caches.
@@ -212,6 +174,59 @@ BUILD SUCCESSFUL in 5s
 docker call file://Dockerfile#build-only  0.12s user 0.11s system 3% cpu 7.005 total
 ```
 
+Note that the volumes are consistently hashed (we will use the `--dry-run` flag that skips the execution):
+```shell
+$ docker call file://Dockerfile#test --dry-run
+Will run image 'sha256:982066bad72e6aede1ae84dd41711f311e2b0fcbbe59035b44a2104fcaf30b14' with the following flags:
+	--mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock
+	--mount type=bind,source=.,target=/work
+	--network host
+	-v action-cbb58c517b7c38e4789f9a016f044a1578e8d428:/root/.gradle
+	-v action-dcfeaade80a873a79b6904878ac47bbf06a53079:/work/.gradle
+	-e workdir=/Users/bsideup/Downloads/testcontainers-java
+```
+
+### Docker Wormhole pattern
+We can even go as crazy as running nested docker commands:
+```Dockerfile
+FROM docker:cli as smoke-test
+
+    LABEL com.docker.runtime.mounts.docker='type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock'
+    LABEL com.docker.runtime.envs.WORKDIR='${workdir}'
+    LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=${workdir}'
+
+    COPY --from=build /work/docker-call /root/.docker/cli-plugins/docker-call
+
+    CMD ["sh", "-c", "docker call -w $workdir file://examples/exa.Dockerfile"]
+```
+
+This will start a container with Docker CLI, install Docker Call CLI plugin in it, mount the Docker socket, mount project's workdir and execute `exa` from previous example, all with a single, simple invocation:
+```shell
+$ docker call file://Dockerfile#smoke-test
+[+] Building 0.2s (7/7) FINISHED                                             docker:default
+ => [internal] load build definition from exa.Dockerfile                               0.0s
+ => => transferring dockerfile: 225B                                                   0.0s
+ => [internal] load metadata for docker.io/library/alpine:3                            0.2s
+ => [internal] load .dockerignore                                                      0.0s
+ => => transferring context: 52B                                                       0.0s
+ => [1/3] FROM docker.io/library/alpine:3@sha256:c5b1261d6d3e43071626931fc004f70149ba  0.0s
+ => CACHED [2/3] WORKDIR /work                                                         0.0s
+ => CACHED [3/3] RUN apk add --no-cache exa                                            0.0s
+ => exporting to image                                                                 0.0s
+ => => exporting layers                                                                0.0s
+ => => writing image sha256:146c1fd20a955eea0ea7d40f355cb13d5535ec26657427e6e0a8a5a8e  0.0s
+WARNING: current commit information was not captured by the build: git was not found in the system: exec: "git": executable file not found in $PATH
+.rwxr-xr-x  24M root  5 May 20:30 docker-call
+.rw-r--r--  787 root  5 May 21:17 Dockerfile
+drwxr-xr-x    - root  5 May 21:09 examples
+.rw-r--r-- 3.5k root  5 May 20:31 go.mod
+.rw-r--r--  72k root 28 Apr 17:04 go.sum
+.rw-r--r-- 1.1k root  5 May 20:21 LICENSE.md
+.rw-r--r-- 4.3k root  5 May 20:53 main.go
+.rw-r--r--   62 root  2 May 12:52 Makefile
+.rw-r--r-- 5.8k root  5 May 21:21 README.md
+```
+
 ### Actions as images
 Docker Call allows you to publish your steps (actions?) as images:
 ```shell
@@ -246,9 +261,10 @@ $ docker call -w examples/ bsideup/exa
 
 | Label | Corresponding Docker CLI flag | Example |
 | --- | --- | --- |
-| `com.docker.runtime.mounts.$name` | `--mount` | `type=bind,source=${workdir},target=/work` |
-| `com.docker.runtime.ports.$name` | `-p` | `8080:80` |
-| `com.docker.runtime.network` | `--network` | `host` |
+| `com.docker.runtime.mounts.$name` | `--mount=$value` | `type=bind,source=${workdir},target=/work` |
+| `com.docker.runtime.ports.$name` | `-p=$value` | `8080:80` |
+| `com.docker.runtime.network` | `--network=$value` | `host` |
+| `com.docker.runtime.envs.$name` | `-v $name=$value` | `${workdir}` |
 
 All labels support the following variables:
 - `workdir` workdir passed to `docker call` via `-w` flag, defaults to `docker call`'s workdir
