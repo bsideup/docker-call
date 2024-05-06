@@ -9,23 +9,21 @@ Run `make install` or `go build -o $HOME/.docker/cli-plugins/docker-call .`.
 
 ### Simple
 Here is the simplest example:
-```shell
-$  bat examples/exa.Dockerfile
-───────┬──────────────────────────────────────────────────────────────────────────
-       │ File: examples/exa.Dockerfile
-───────┼──────────────────────────────────────────────────────────────────────────
-   1   │ FROM alpine:3
-   2   │ 
-   3   │ # mount the current directory as /work
-   4   │ LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=/work'
-   5   │ 
-   6   │ WORKDIR /work
-   7   │ 
-   8   │ RUN apk add --no-cache exa
-   9   │ 
-  10   │ CMD exa -l
-───────┴──────────────────────────────────────────────────────────────────────────
+```Dockerfile
+# examples/exa.Dockerfile
+FROM alpine:3
 
+# mount the current directory as /work
+LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=/work'
+
+WORKDIR /work
+
+RUN apk add --no-cache exa
+
+CMD exa -l
+```
+
+```shell
 $ docker call file://examples/exa.Dockerfile
 [+] Building 0.3s (7/7) FINISHED                   docker:desktop-linux
  => [internal] load build definition from exa.Dockerfile           0.0s
@@ -57,19 +55,17 @@ docker run -it --rm -v .:/work $(docker build -q examples/exa.Dockerfile)
 ### Nginx
 
 Now let's try something a bit more advanced:
-```shell
-bat examples/nginx.Dockerfile
-───────┬────────────────────────────────────────────────────────────────────────────────────────────
-       │ File: examples/nginx.Dockerfile
-───────┼────────────────────────────────────────────────────────────────────────────────────────────
-   1   │ FROM nginx:1.21
-   2   │ 
-   3   │     LABEL com.docker.runtime.mounts.html='type=bind,source=.,target=/usr/share/nginx/html/'
-   4   │     LABEL com.docker.runtime.ports.http='8080:80'
-   5   │ 
-   6   │     CMD ["nginx", "-g", "daemon off;"]
-───────┴────────────────────────────────────────────────────────────────────────────────────────────
+```Dockerfile
+# examples/nginx.Dockerfile
+FROM nginx:1.21
 
+LABEL com.docker.runtime.mounts.project='type=bind,source=.,target=/usr/share/nginx/html/'
+LABEL com.docker.runtime.ports.http='8080:80'
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+```shell
 $ docker call file://examples/nginx.Dockerfile
 ```
 
