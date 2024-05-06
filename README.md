@@ -91,9 +91,9 @@ FROM golang:1.22 AS workspace
 
 FROM workspace as build
 
-        COPY . .
-    
-        RUN CGO_ENABLED=0 go build -ldflags="-extldflags=-static" .
+    COPY . .
+
+    RUN CGO_ENABLED=0 go build -ldflags="-extldflags=-static" .
 ```
 
 As you can see, this is a multistage Dockerfile, formatted [to my preference](https://x.com/bsideup/status/1784262018834334196).
