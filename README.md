@@ -226,7 +226,7 @@ drwxr-xr-x    - root  5 May 21:09 examples
 ### Actions as images
 Docker Call allows you to publish your steps (actions?) as images:
 ```shell
-$ docker build --push --target=workspace -t bsideup/go-workspace .
+$ docker build --target=workspace -t bsideup/go-workspace .
 [+] Building 0.3s (9/9) FINISHED                      docker:desktop-linux
  => [internal] load build definition from Dockerfile                  0.1s
  => => transferring dockerfile: 826B                                  0.0s
@@ -247,7 +247,19 @@ $ docker build --push --target=workspace -t bsideup/go-workspace .
 $ docker call bsideup/go-workspace -- go version
 go version go1.22.2 linux/arm64
 
-$ docker build --push -t bsideup/exa -f examples/exa.Dockerfile .
+$ docker call bsideup/go-workspace -- go run main.go --help
+
+Usage:  docker [OPTIONS] COMMAND
+
+docker-call is a Docker CLI plugin
+```
+
+Or straight from Docker Hub (consider using `--dry-run` to inspect it before running):
+```shell
+$ docker call -w examples/ bsideup/exa --dry-run
+Will run image 'bsideup/exa' with the following flags:
+	--mount type=bind,source=.,target=/work
+
 $ docker call -w examples/ bsideup/exa
 .rw-r--r-- 182 root  5 May 21:01 exa.Dockerfile
 .rw-r--r-- 201 root  5 May 21:13 nginx.Dockerfile
